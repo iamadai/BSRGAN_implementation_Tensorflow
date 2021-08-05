@@ -28,6 +28,7 @@ class Data:
 
         self.scale = scale
         self.subset = subset
+        self.hr_crop_size = 160
 
         self.HR_fold = f'{self.subset}'
 
@@ -45,8 +46,8 @@ class Data:
 
     def dataset(self, batch_size=16, repeat_count=None):
         ds = tf.data.Dataset.zip(self.hr_dataset())
-        ds = ds.map(lambda hr: random_crop(hr), num_parallel_calls=AUTOTUNE)
-        ds = ds.map(lambda hr: generate_pair(hr, self.scale), num_parallel_calls=AUTOTUNE)
+        ds = ds.map(lambda hr: random_crop(hr, hr_crop_size=self.hr_crop_size), num_parallel_calls=AUTOTUNE)
+        ds = ds.map(lambda hr: generate_pair(hr, hr_crop_size=self.hr_crop_size, scale=self.scale), num_parallel_calls=AUTOTUNE)
         ds = ds.batch(batch_size)
         ds = ds.repeat(repeat_count)
         ds = ds.prefetch(buffer_size=AUTOTUNE)
@@ -85,7 +86,7 @@ def random_crop(hr_img, hr_crop_size=160):
     hr_img_cropped = tf.image.random_crop(value=hr_img, size=(hr_crop_size, hr_crop_size, 3))
     return hr_img_cropped
 
-def generate_pair(hr_img, scale=2):
+def generate_pair(hr_img, hr_crop_size=160, scale=2):
     lr_img = hr_img
     degrade_seq = ["down", "blur_iso", "blur_aniso", "noise", "camera"]
     if random.randint(1, 4) <= 3:
@@ -93,9 +94,11 @@ def generate_pair(hr_img, scale=2):
     random.shuffle(degrade_seq)
     degrade_seq.append("jpeg")
 
+    lr_w = hr_crop_size // scale
+    lr_h = hr_crop_size // scale
     for mode in degrade_seq:
         if mode == "down":
-            lr_img = down_image(lr_img, scale)
+            lr_img = down_image(lr_img, hr_crop_size=hr_crop_size, scale=scale)
         elif mode == "camera":
             lr_img = camera_effect(lr_img)
         elif mode == "blur_iso":
@@ -105,6 +108,7 @@ def generate_pair(hr_img, scale=2):
         elif mode == "noise":
             lr_img = noise_effect(lr_img)
         elif mode == "jpeg":
+            lr_img.set_shape([lr_h, lr_w, 3])
             lr_img = tf.image.random_jpeg_quality(lr_img, min_jpeg_quality=65, max_jpeg_quality=95)
 
     return lr_img, hr_img
@@ -119,7 +123,7 @@ def blur_effect(img, is_aniso=False):
     processed = tfa.image.gaussian_filter2d(image=img, filter_shape=[filter_shape, filter_shape], sigma=sigma)
     return processed
 
-def down_image(hr_img, scale=2):
+def down_image(hr_img, hr_crop_size=160, scale=2):
     img_shape = tf.shape(hr_img)[:2]
     lr_w = img_shape[1] // scale
     lr_h = img_shape[0] // scale
@@ -142,6 +146,7 @@ def down_image(hr_img, scale=2):
     elif mode == 8:
         method = tf.image.ResizeMethod.MITCHELLCUBIC
 
+    hr_img.set_shape([hr_crop_size, hr_crop_size, 3])
     lr_img = tf.image.resize(hr_img, size=[lr_h, lr_w], method=method, antialias=True)
     return lr_img
 
