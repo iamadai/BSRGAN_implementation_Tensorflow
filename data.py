@@ -94,11 +94,13 @@ def generate_pair(hr_img, hr_crop_size=160, scale=2):
     random.shuffle(degrade_seq)
     degrade_seq.append("jpeg")
 
-    lr_w = hr_crop_size // scale
-    lr_h = hr_crop_size // scale
+    lr_w = hr_crop_size
+    lr_h = hr_crop_size
     for mode in degrade_seq:
         if mode == "down":
             lr_img = down_image(lr_img, hr_crop_size=hr_crop_size, scale=scale)
+            lr_w = hr_crop_size // scale
+            lr_h = hr_crop_size // scale
         elif mode == "camera":
             lr_img = camera_effect(lr_img)
         elif mode == "blur_iso":
