@@ -98,7 +98,10 @@ def generate_pair(hr_img, hr_crop_size=160, scale=2):
     lr_h = hr_crop_size
     for mode in degrade_seq:
         if mode == "down":
-            lr_img = down_image(lr_img, hr_crop_size=hr_crop_size, scale=scale)
+            if random.randint(0, 1) == 1:
+                lr_img = down_image(lr_img, hr_crop_size=hr_crop_size, scale=scale)
+            else:
+                lr_img = down_image2step(lr_img, hr_crop_size=hr_crop_size, scale=scale)
             lr_w = hr_crop_size // scale
             lr_h = hr_crop_size // scale
         elif mode == "camera":
@@ -125,10 +128,53 @@ def blur_effect(img, is_aniso=False):
     processed = tfa.image.gaussian_filter2d(image=img, filter_shape=[filter_shape, filter_shape], sigma=sigma)
     return processed
 
+def down_image2step(hr_img, hr_crop_size=160, scale=2):
+    lr_w = hr_crop_size // scale
+    lr_h = hr_crop_size // scale
+
+    upscale = random.uniform(0.5, scale)
+
+    up_w = int(hr_crop_size/upscale)
+    up_h = int(hr_crop_size/upscale)
+
+    mode = random.randint(2, 8)
+    upmethod = tf.image.ResizeMethod.BILINEAR
+    if mode == 3:
+        upmethod = tf.image.ResizeMethod.BICUBIC
+    elif mode == 4:
+        upmethod = tf.image.ResizeMethod.GAUSSIAN
+    elif mode == 5:
+        upmethod = tf.image.ResizeMethod.AREA
+    elif mode == 6:
+        upmethod = tf.image.ResizeMethod.LANCZOS3
+    elif mode == 7:
+        upmethod = tf.image.ResizeMethod.LANCZOS5
+    elif mode == 8:
+        upmethod = tf.image.ResizeMethod.MITCHELLCUBIC
+
+    mode = random.randint(2, 8)
+    downmethod = tf.image.ResizeMethod.BILINEAR
+    if mode == 3:
+        downmethod = tf.image.ResizeMethod.BICUBIC
+    elif mode == 4:
+        downmethod = tf.image.ResizeMethod.GAUSSIAN
+    elif mode == 5:
+        downmethod = tf.image.ResizeMethod.AREA
+    elif mode == 6:
+        downmethod = tf.image.ResizeMethod.LANCZOS3
+    elif mode == 7:
+        downmethod = tf.image.ResizeMethod.LANCZOS5
+    elif mode == 8:
+        downmethod = tf.image.ResizeMethod.MITCHELLCUBIC
+
+    hr_img.set_shape([hr_crop_size, hr_crop_size, 3])
+    lr_img = tf.image.resize(tf.image.resize(hr_img, size=[up_h, up_w], method=upmethod, antialias=True),
+                             size=[lr_h, lr_w], method=downmethod, antialias=True)
+    return lr_img
+
 def down_image(hr_img, hr_crop_size=160, scale=2):
-    img_shape = tf.shape(hr_img)[:2]
-    lr_w = img_shape[1] // scale
-    lr_h = img_shape[0] // scale
+    lr_w = hr_crop_size // scale
+    lr_h = hr_crop_size // scale
     mode = random.randint(1, 8)
     method = tf.image.ResizeMethod.NEAREST_NEIGHBOR
     if mode == 1:
