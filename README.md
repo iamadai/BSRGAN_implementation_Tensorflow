@@ -7,7 +7,7 @@ Works with tensorflow 2.4 and 2.5, not tested on other versions
 How to use data.py in your code, please refer to [**example-srgan.ipynb**](https://github.com/krasserm/super-resolution/blob/master/example-srgan.ipynb)
 
 ## Issues
-Occasionly throw following exception, don't know why!
+Training speed is extremely slow!
 
-    ValueError: as_list() is not defined on an unknown TensorShape.
+ 
 
